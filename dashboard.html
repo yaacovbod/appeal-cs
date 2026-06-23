@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>דשבורד ערעורים — מדעי המחשב</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --accent:       #0891B2;
+      --accent-light: #E0F2FE;
+      --text:         #111111;
+      --muted:        #6B7280;
+      --border:       #E5E7EB;
+      --bg:           #F9FAFB;
+      --white:        #FFFFFF;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      direction: rtl;
+    }
+
+    .page { max-width: 900px; margin: 0 auto; padding: 32px 16px 64px; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .subject-tag {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 4px 12px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .header h1 { font-size: 26px; font-weight: 800; }
+    .header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .refresh-btn {
+      padding: 10px 18px;
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: 'Heebo', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.18s;
+      white-space: nowrap;
+      min-height: 44px;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Stat cards ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 18px;
+      text-align: center;
+    }
+
+    .stat-card .num {
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1.1;
+    }
+
+    .stat-card .lbl {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── Chart card ── */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 18px;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 220px;
+    }
+
+    /* ── Table ── */
+    .table-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .table-header h2 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .table-scroll { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      background: var(--bg);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 10px 16px;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--bg); }
+
+    tbody td {
+      padding: 13px 16px;
+      font-size: 14px;
+      vertical-align: top;
+    }
+
+    .reason-cell {
+      max-width: 320px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.5;
+    }
+
+    .diff-badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .diff-up   { background: #DCFCE7; color: #166534; }
+    .diff-down { background: #FEF2F2; color: #991B1B; }
+    .diff-same { background: var(--bg); color: var(--muted); }
+
+    /* ── Loading / empty ── */
+    .state-msg {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      .stats-row  { grid-template-columns: 1fr 1fr; }
+      .page { padding: 20px 12px 48px; }
+      .stat-card .num { font-size: 26px; }
+    }
+
+    @media (max-width: 360px) {
+      .stats-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="header">
+    <div>
+      <div class="subject-tag">מדעי המחשב</div>
+      <h1>דשבורד ערעורים</h1>
+      <p id="lastUpdate">טוען נתונים...</p>
+    </div>
+    <button class="refresh-btn" onclick="loadData()">רענן</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="num" id="statTotal">—</div>
+      <div class="lbl">סה"כ בקשות</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="statAvgDiff">—</div>
+      <div class="lbl">פער ממוצע (נקודות)</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="statMaxDiff">—</div>
+      <div class="lbl">פער מקסימלי</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card">
+    <div class="card-title">פערים מבוקשים</div>
+    <div class="chart-wrap"><canvas id="chartDiffs"></canvas></div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <h2>כל הבקשות</h2>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>חותמת זמן</th>
+            <th>שם מלא</th>
+            <th>ציון קיים</th>
+            <th>ציון מבוקש</th>
+            <th>פער</th>
+            <th>סיבה</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="7"><div class="state-msg">טוען...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFDlBHn07-bzcBGhok5pVsrFsQcvwspYEf8DF8toXFzog-qhkerIbNc361-Xij3W2VAg/exec';
+  const SHEET_NAME = 'ערעור מדעי המחשב';
+  const ACCENT = '#0891B2';
+
+  let allRows = [];
+  let chartDiffs = null;
+
+  function loadData() {
+    document.getElementById('lastUpdate').textContent = 'טוען נתונים...';
+    const cb = 'cb_' + Date.now();
+    window[cb] = function(data) {
+      processData(data);
+      delete window[cb];
+    };
+    const script = document.createElement('script');
+    script.src = APPS_SCRIPT_URL + '?sheetName=' + encodeURIComponent(SHEET_NAME) + '&callback=' + cb;
+    script.onerror = function() {
+      document.getElementById('lastUpdate').textContent = 'שגיאה בטעינה';
+      document.getElementById('tableBody').innerHTML =
+        '<tr><td colspan="7"><div class="state-msg">לא ניתן לטעון נתונים. נסה/י לרענן.</div></td></tr>';
+    };
+    document.head.appendChild(script);
+    setTimeout(function() { script.remove(); }, 10000);
+  }
+
+  function processData(raw) {
+    if (!Array.isArray(raw) || raw.length < 2) {
+      allRows = [];
+      render();
+      document.getElementById('lastUpdate').textContent = 'אין נתונים עדיין';
+      return;
+    }
+
+    // raw[0] = headers, raw[1..] = rows
+    const headers = raw[0];
+    const colIdx = {};
+    headers.forEach(function(h, i) { colIdx[h] = i; });
+
+    allRows = raw.slice(1).map(function(r) {
+      return {
+        timestamp:      r[colIdx['חותמת זמן']]      || '',
+        fullName:       r[colIdx['שם מלא']]          || '',
+        currentGrade:   parseInt(r[colIdx['ציון קיים']]    || '0', 10),
+        requestedGrade: parseInt(r[colIdx['ציון מבוקש']]   || '0', 10),
+        reason:         r[colIdx['סיבה לבקשה']]      || '',
+      };
+    }).filter(function(r) { return r.fullName; });
+
+    render();
+    document.getElementById('lastUpdate').textContent =
+      'עודכן: ' + new Date().toLocaleString('he-IL');
+  }
+
+  function render() {
+    renderStats();
+    renderTable();
+    renderCharts();
+  }
+
+  function renderStats() {
+    const n = allRows.length;
+    document.getElementById('statTotal').textContent = n;
+
+    if (n === 0) {
+      document.getElementById('statAvgDiff').textContent = '—';
+      document.getElementById('statMaxDiff').textContent = '—';
+      return;
+    }
+
+    const diffs = allRows.map(function(r) { return r.requestedGrade - r.currentGrade; });
+    const avg = diffs.reduce(function(a, b) { return a + b; }, 0) / n;
+    const max = Math.max.apply(null, diffs);
+    document.getElementById('statAvgDiff').textContent = avg.toFixed(1);
+    document.getElementById('statMaxDiff').textContent = max;
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+
+    if (allRows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="state-msg">אין בקשות עדיין.</div></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = allRows.map(function(r, i) {
+      const diff = r.requestedGrade - r.currentGrade;
+      var cls = 'diff-same', sign = '';
+      if (diff > 0) { cls = 'diff-up';   sign = '+'; }
+      if (diff < 0) { cls = 'diff-down'; }
+      return '<tr>' +
+        '<td>' + (i + 1) + '</td>' +
+        '<td style="white-space:nowrap">' + esc(r.timestamp) + '</td>' +
+        '<td style="white-space:nowrap">' + esc(r.fullName) + '</td>' +
+        '<td style="text-align:center">' + r.currentGrade + '</td>' +
+        '<td style="text-align:center">' + r.requestedGrade + '</td>' +
+        '<td style="text-align:center"><span class="diff-badge ' + cls + '">' + sign + diff + '</span></td>' +
+        '<td class="reason-cell">' + esc(r.reason) + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderCharts() {
+    const buckets = { '1-5': 0, '6-10': 0, '11-15': 0, '16-20': 0, '21+': 0 };
+    allRows.forEach(function(r) {
+      const d = r.requestedGrade - r.currentGrade;
+      if (d <= 0) return;
+      if (d <= 5)  buckets['1-5']++;
+      else if (d <= 10) buckets['6-10']++;
+      else if (d <= 15) buckets['11-15']++;
+      else if (d <= 20) buckets['16-20']++;
+      else buckets['21+']++;
+    });
+
+    if (chartDiffs) chartDiffs.destroy();
+    chartDiffs = new Chart(document.getElementById('chartDiffs'), {
+      type: 'bar',
+      data: {
+        labels: Object.keys(buckets),
+        datasets: [{
+          data: Object.values(buckets),
+          backgroundColor: ACCENT + 'CC',
+          borderColor: ACCENT,
+          borderWidth: 1.5,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Heebo', size: 11 } } },
+          x: { ticks: { font: { family: 'Heebo', size: 11 } } }
+        }
+      }
+    });
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  loadData();
+</script>
+
+</body>
+</html>
